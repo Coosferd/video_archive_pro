@@ -7,8 +7,16 @@
   <title>Video Editor Archive</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Самая ранняя инициализация для GitHub Pages
-    window.process = { env: { NODE_ENV: 'production', API_KEY: '' } };
+    // Самая надежная инициализация окружения для предотвращения "черного экрана"
+    if (typeof window.process === 'undefined') {
+      window.process = { 
+        env: { 
+          NODE_ENV: 'production', 
+          API_KEY: '' 
+        },
+        browser: true
+      };
+    }
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');

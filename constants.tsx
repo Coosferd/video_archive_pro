@@ -1,5 +1,5 @@
 
-// ВАЖНО: Вставьте весь ваш список из 407 строк ниже между кавычками ` `
+// ВАЖНО: Весь ваш список из 407 работ должен быть внутри rawData1
 export const rawData1 = `Name	Date	Tags
 https://www.youtube.com/watch?v=xHiyZK_6Kl8	2019-2021	private, travel
 https://youtube.com/video/MU9hGO9apBM	until 2014	private

@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { VideoWork, FilterState } from './types';
 import { processRawData } from './services/dataService';
 import { saveEdit } from './services/storageService';
-import { rawData1, rawData2, rawData3, rawData4 } from './constants';
+import * as Constants from './constants';
 import VideoGrid from './components/VideoGrid';
 import VideoPlayer from './components/VideoPlayer';
 import EditModal from './components/EditModal';
@@ -17,25 +17,33 @@ const App: React.FC = () => {
 
   const loadData = () => {
     try {
-      const sources = [rawData1, rawData2, rawData3, rawData4].filter(s => typeof s === 'string' && s.trim().length > 0);
+      // Используем Constants напрямую для надежности экспорта в production
+      const rawData = [
+        Constants.rawData1, 
+        Constants.rawData2, 
+        Constants.rawData3, 
+        Constants.rawData4
+      ];
+      
+      const sources = rawData.filter(s => typeof s === 'string' && s.trim().length > 0);
       const combinedData = processRawData(sources);
       setAllVideos(combinedData);
     } catch (err) {
       console.error("Critical error during data sync:", err);
-      // Fallback to empty if everything fails to avoid black screen
       setAllVideos([]);
     }
   };
 
   useEffect(() => {
     loadData();
-    const timer = setTimeout(() => setIsLoading(false), 250);
+    const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);
   }, []);
 
   const filteredVideos = useMemo(() => {
     const query = filters.search.toLowerCase();
     return allVideos.filter(v => {
+      if (!v) return false;
       const title = v.title?.toLowerCase() || "";
       const url = v.cleanUrl?.toLowerCase() || "";
       const matchesSearch = query === '' || 
@@ -52,7 +60,7 @@ const App: React.FC = () => {
   const tagStats = useMemo(() => {
     const stats: Record<string, number> = {};
     allVideos.forEach(v => {
-      if (v.tags) {
+      if (v && v.tags) {
         v.tags.forEach(tag => {
           if (tag) stats[tag] = (stats[tag] || 0) + 1;
         });
@@ -64,7 +72,7 @@ const App: React.FC = () => {
   const dateStats = useMemo(() => {
     const stats: Record<string, number> = {};
     allVideos.forEach(v => {
-      if (v.date) stats[v.date] = (stats[v.date] || 0) + 1;
+      if (v && v.date) stats[v.date] = (stats[v.date] || 0) + 1;
     });
     return stats;
   }, [allVideos]);

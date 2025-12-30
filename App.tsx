@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { VideoWork, FilterState } from './types';
-import { processRawData } from './services/dataService';
-import { saveEdit } from './services/storageService';
-import * as Constants from './constants';
-import VideoGrid from './components/VideoGrid';
-import VideoPlayer from './components/VideoPlayer';
-import EditModal from './components/EditModal';
+import { VideoWork, FilterState } from './types.ts';
+import { processRawData } from './services/dataService.ts';
+import { saveEdit } from './services/storageService.ts';
+import { rawData1, rawData2, rawData3, rawData4 } from './constants.tsx';
+import VideoGrid from './components/VideoGrid.tsx';
+import VideoPlayer from './components/VideoPlayer.tsx';
+import EditModal from './components/EditModal.tsx';
 
 const App: React.FC = () => {
   const [allVideos, setAllVideos] = useState<VideoWork[]>([]);
@@ -17,15 +17,7 @@ const App: React.FC = () => {
 
   const loadData = () => {
     try {
-      // Используем Constants напрямую для надежности экспорта в production
-      const rawData = [
-        Constants.rawData1, 
-        Constants.rawData2, 
-        Constants.rawData3, 
-        Constants.rawData4
-      ];
-      
-      const sources = rawData.filter(s => typeof s === 'string' && s.trim().length > 0);
+      const sources = [rawData1, rawData2, rawData3, rawData4].filter(s => typeof s === 'string' && s.trim().length > 0);
       const combinedData = processRawData(sources);
       setAllVideos(combinedData);
     } catch (err) {

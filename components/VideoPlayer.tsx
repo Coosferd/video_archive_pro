@@ -9,21 +9,27 @@ interface Props {
 
 const VideoPlayer: React.FC<Props> = ({ video, onClose }) => {
   const getEmbedUrl = (url: string) => {
-    if (url.includes('youtube.com/shorts/')) {
-      const id = url.split('shorts/')[1].split(/[?&]/)[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    try {
+      if (url.includes('youtube.com/shorts/')) {
+        const parts = url.split('shorts/');
+        if (parts.length > 1) {
+          const id = parts[1].split(/[?&]/)[0];
+          return `https://www.youtube.com/embed/${id}?autoplay=1`;
+        }
+      }
+      
+      const ytMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+      if (ytMatch && ytMatch[2] && ytMatch[2].length === 11) {
+        return `https://www.youtube.com/embed/${ytMatch[2]}?autoplay=1`;
+      }
+      
+      const vimeoMatch = url.match(/vimeo.com\/(?:video\/)?(\d+)/);
+      if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+      }
+    } catch (e) {
+      console.error("Embed URL generation failed", e);
     }
-    const ytMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
-    if (ytMatch && ytMatch[2].length === 11) {
-      return `https://www.youtube.com/embed/${ytMatch[2]}?autoplay=1`;
-    }
-    
-    // Vimeo detection
-    const vimeoMatch = url.match(/vimeo.com\/(?:video\/)?(\d+)/);
-    if (vimeoMatch) {
-      return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
-    }
-
     return null;
   };
 

@@ -4,68 +4,95 @@ import { getAllEdits } from './storageService';
 
 export const processRawData = (dataSources: string[]): VideoWork[] => {
   const videos: VideoWork[] = [];
-  const seenWorkKeys = new Set<string>();
   const localEdits = getAllEdits();
+  
+  const isTag = (s: string) => /cringe|private|commercial|report|freelance|smm|talking head|copyes|pokolenium|vertical|public|youtube|education|gamedev|travel|showreel|university/i.test(s);
+  const isDate = (s: string) => /\d{4}|until/i.test(s);
 
-  dataSources.forEach((source) => {
-    const lines = source.trim().split(/\r?\n/);
+  dataSources.forEach((source, sourceIdx) => {
+    if (!source || source.trim().length < 5) return;
+    
+    const lines = source.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) return;
 
-    const headerRow = lines[0].toLowerCase();
-    const columns = headerRow.split(/\t| {2,}/).map(c => c.trim());
-    
-    const nameIdx = columns.findIndex(c => c.includes('name') || c.includes('url'));
-    const titleIdx = columns.findIndex(c => c.includes('title') || c.includes('название'));
-    const tagsIdx = columns.findIndex(c => c.includes('tags'));
-    const dateIdx = columns.findIndex(c => c.includes('date'));
+    // Авто-определение заголовка
+    const firstLine = lines[0].toLowerCase();
+    const hasHeader = firstLine.includes('name') || firstLine.includes('tags') || !firstLine.includes('http');
+    const dataLines = hasHeader ? lines.slice(1) : lines;
 
-    lines.slice(1).forEach((line, lineIndex) => {
-      const parts = line.split(/\t| {2,}/).map(p => p.trim());
-      if (parts.length < 1) return;
+    const separator = source.includes('\t') ? '\t' : ',';
 
-      const rawUrl = parts[nameIdx !== -1 ? nameIdx : 0] || "";
-      const rawTitle = titleIdx !== -1 ? parts[titleIdx] : "";
-      let rawTags = parts[tagsIdx !== -1 ? tagsIdx : 2] || "";
-      let rawDate = parts[dateIdx !== -1 ? dateIdx : 1] || "";
-
-      // DATA FIX: If date column contains common tags and no numbers, swap them
-      const isActuallyTag = (str: string) => /cringe|private|commercial|report|freelance|smm|talking head/i.test(str) && !/\d/.test(str);
-      const isActuallyDate = (str: string) => /\d{4}|until/i.test(str);
-
-      if (isActuallyTag(rawDate) && isActuallyDate(rawTags)) {
-        [rawDate, rawTags] = [rawTags, rawDate];
+    dataLines.forEach((line, lineIdx) => {
+      let parts: string[] = [];
+      if (separator === ',') {
+        const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        parts = matches ? matches.map(m => m.replace(/"/g, '')) : [];
+      } else {
+        parts = line.split('\t').map(p => p.trim());
       }
 
-      const urlMatch = rawUrl.match(/(https?:\/\/[^\s,]+)/);
-      if (!urlMatch) return;
-      
-      const cleanUrl = urlMatch[1].replace(/[)\]"”'.,]+$/, ''); 
-      const workKey = `vid-${cleanUrl.toLowerCase()}-${rawDate}`;
-      
-      if (seenWorkKeys.has(workKey)) return;
-      seenWorkKeys.add(workKey);
-
-      if (localEdits[workKey]) {
-        videos.push(localEdits[workKey]);
-        return;
+      // Ищем URL в любой колонке, чтобы не пропустить работы
+      let url = "";
+      let urlColIdx = -1;
+      for (let i = 0; i < parts.length; i++) {
+        const match = parts[i].match(/(https?:\/\/[^\s,]+)/);
+        if (match) {
+          url = match[1].replace(/[)\]"”'.,]+$/, '');
+          urlColIdx = i;
+          break;
+        }
       }
-
-      const tags = rawTags.split(/[,;|]+/).map(t => t.trim()).filter(t => t.length > 1);
       
-      videos.push({
-        id: workKey,
-        url: cleanUrl,
-        cleanUrl: cleanUrl,
-        title: rawTitle || "Untitled Project",
-        tags,
-        date: rawDate.trim() || "Archive",
-        platform: getPlatform(cleanUrl),
-        thumbnail: getThumbnail(cleanUrl)
-      });
+      if (url) {
+        // Пытаемся понять, что в остальных колонках
+        const otherParts = parts.filter((_, idx) => idx !== urlColIdx);
+        
+        let rawDate = "";
+        let rawTags = "";
+        let rawTitle = "";
+
+        otherParts.forEach(part => {
+          if (isDate(part)) rawDate = part;
+          else if (isTag(part)) rawTags = part;
+          else if (part.length > 2 && !rawTitle) rawTitle = part;
+        });
+
+        // Если заголовок не найден в колонках, берем часть из колонки с URL (если там был текст)
+        if (!rawTitle) {
+          rawTitle = parts[urlColIdx].replace(url, '').trim() || "Project Archive";
+        }
+
+        const tags = rawTags.split(/[,;|]+/).map(t => t.trim()).filter(t => t.length > 1);
+        const finalDate = rawDate.trim() || "2014-2024";
+
+        // ID на основе URL и позиции для гарантии отображения всех 400+ работ
+        const id = `v-${sourceIdx}-${lineIdx}-${url.length}-${url.slice(-5)}`;
+        
+        if (localEdits[id]) {
+          videos.push(localEdits[id]);
+        } else {
+          videos.push({
+            id,
+            url: url,
+            cleanUrl: url,
+            title: rawTitle.replace(/[“”""]/g, ''),
+            tags,
+            date: finalDate,
+            platform: getPlatform(url),
+            thumbnail: getThumbnail(url)
+          });
+        }
+      }
     });
   });
 
-  return videos.sort((a, b) => b.date.localeCompare(a.date));
+  return videos.sort((a, b) => {
+    const getYear = (s: string) => {
+      const m = s.match(/\d{4}/);
+      return m ? parseInt(m[0]) : 0;
+    };
+    return getYear(b.date) - getYear(a.date);
+  });
 };
 
 export const getPlatform = (url: string): VideoWork['platform'] => {
@@ -79,19 +106,20 @@ export const getPlatform = (url: string): VideoWork['platform'] => {
 };
 
 export const getThumbnail = (url: string): string => {
-  if (url.includes('shorts/')) {
-    const id = url.split('shorts/')[1]?.split(/[?&]/)[0];
-    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : '';
-  }
   const ytMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
   if (ytMatch && ytMatch[2].length === 11) {
     return `https://img.youtube.com/vi/${ytMatch[2]}/mqdefault.jpg`;
   }
   
   if (url.includes('vimeo')) {
-    const id = url.match(/vimeo.com\/(\d+)/)?.[1] || 'vimeo';
+    const id = url.match(/vimeo.com\/(?:video\/)?(\d+)/)?.[1] || 'vimeo';
     return `https://picsum.photos/seed/vimeo-${id}/640/360?blur=1`;
   }
 
-  return `https://picsum.photos/seed/${btoa(url).slice(-10)}/640/360`;
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    hash = ((hash << 5) - hash) + url.charCodeAt(i);
+    hash |= 0;
+  }
+  return `https://picsum.photos/seed/${Math.abs(hash)}/640/360`;
 };

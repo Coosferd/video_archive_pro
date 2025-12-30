@@ -1,6 +1,6 @@
 
-import { VideoWork } from '../types';
-import { getAllEdits } from './storageService';
+import { VideoWork } from '../types.ts';
+import { getAllEdits } from './storageService.ts';
 
 export const processRawData = (dataSources: string[]): VideoWork[] => {
   const videos: VideoWork[] = [];
@@ -15,7 +15,6 @@ export const processRawData = (dataSources: string[]): VideoWork[] => {
     const lines = source.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) return;
 
-    // Авто-определение заголовка
     const firstLine = lines[0].toLowerCase();
     const hasHeader = firstLine.includes('name') || firstLine.includes('tags') || !firstLine.includes('http');
     const dataLines = hasHeader ? lines.slice(1) : lines;
@@ -31,7 +30,6 @@ export const processRawData = (dataSources: string[]): VideoWork[] => {
         parts = line.split('\t').map(p => p.trim());
       }
 
-      // Ищем URL в любой колонке, чтобы не пропустить работы
       let url = "";
       let urlColIdx = -1;
       for (let i = 0; i < parts.length; i++) {
@@ -44,9 +42,7 @@ export const processRawData = (dataSources: string[]): VideoWork[] => {
       }
       
       if (url) {
-        // Пытаемся понять, что в остальных колонках
         const otherParts = parts.filter((_, idx) => idx !== urlColIdx);
-        
         let rawDate = "";
         let rawTags = "";
         let rawTitle = "";
@@ -57,7 +53,6 @@ export const processRawData = (dataSources: string[]): VideoWork[] => {
           else if (part.length > 2 && !rawTitle) rawTitle = part;
         });
 
-        // Если заголовок не найден в колонках, берем часть из колонки с URL (если там был текст)
         if (!rawTitle) {
           rawTitle = parts[urlColIdx].replace(url, '').trim() || "Project Archive";
         }
@@ -65,7 +60,6 @@ export const processRawData = (dataSources: string[]): VideoWork[] => {
         const tags = rawTags.split(/[,;|]+/).map(t => t.trim()).filter(t => t.length > 1);
         const finalDate = rawDate.trim() || "2014-2024";
 
-        // ID на основе URL и позиции для гарантии отображения всех 400+ работ
         const id = `v-${sourceIdx}-${lineIdx}-${url.length}-${url.slice(-5)}`;
         
         if (localEdits[id]) {

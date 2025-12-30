@@ -7,16 +7,15 @@
   <title>Video Editor Archive</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Самая надежная инициализация окружения для предотвращения "черного экрана"
-    if (typeof window.process === 'undefined') {
-      window.process = { 
-        env: { 
-          NODE_ENV: 'production', 
-          API_KEY: '' 
-        },
-        browser: true
-      };
-    }
+    // Инициализация окружения ДО загрузки любых модулей
+    window.process = { 
+      env: { 
+        NODE_ENV: 'production', 
+        API_KEY: '' 
+      },
+      browser: true,
+      nextTick: (cb) => setTimeout(cb, 0)
+    };
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -62,13 +61,14 @@
   "imports": {
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/jsx-runtime": "https://esm.sh/react@^19.2.3/jsx-runtime"
   }
 }
 </script>
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" src="index.tsx"></script>
+  <script type="module" src="./index.tsx"></script>
 </body>
 </html>

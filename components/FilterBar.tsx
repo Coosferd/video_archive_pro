@@ -1,3 +1,3 @@
 
-// File removed to prevent ESM resolution issues on static hosts.
+// Removed as it was redundant.
 export {};

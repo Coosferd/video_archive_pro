@@ -1,5 +1,5 @@
 
-import { VideoWork } from '../types';
+import { VideoWork } from '../types.ts';
 
 const STORAGE_KEY = 'v-archive-edits';
 
@@ -10,8 +10,12 @@ export const saveEdit = (video: VideoWork) => {
 };
 
 export const getAllEdits = (): Record<string, VideoWork> => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : {};
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    return {};
+  }
 };
 
 export const clearAllEdits = () => {
